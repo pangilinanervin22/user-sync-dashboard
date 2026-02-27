@@ -1,9 +1,10 @@
 # User Synchronization Dashboard
 
-A full-stack Next.js application that simulates synchronizing user data with an external partner system (e.g., a CRM). Built with **Next.js 16**, **TypeScript**, **Supabase (PostgreSQL)**, and **TanStack React Query**.
+A full-stack Next.js application that simulates synchronizing user data with an external partner system (e.g., a CRM). Built with **Next.js 16**, **TypeScript**, **Supabase (PostgreSQL)**, **TanStack React Query**, and **Supabase Realtime** for instant cross-browser updates.
 
 ## Features
 
+- **Real-time sync** — Changes in one browser instantly appear in all other browsers via Supabase Realtime
 - View all users with their name, email, and sync status
 - Sync individual users or all unsynced users in bulk
 - Unsync all users (for demo/testing)
@@ -40,6 +41,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 ```bash
 # 3. Set up the database
 #    Copy the contents of supabase/seed.sql and run it in the Supabase SQL Editor
+#    This creates the users table and enables realtime subscriptions
 
 # 4. Run the app
 pnpm dev
@@ -51,7 +53,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Database (Supabase / PostgreSQL)
 
-The `users` table uses UUID primary keys, a unique email constraint, a nullable `synced_at` timestamp, and Row Level Security enabled with an open policy for demo purposes. Schema and seed data live in `supabase/seed.sql`.
+The `users` table uses UUID primary keys, a unique email constraint, a nullable `synced_at` timestamp, and Row Level Security enabled with an open policy for demo purposes. The table is registered with Supabase Realtime (`REPLICA IDENTITY FULL`) to enable instant cross-browser change propagation. Schema and seed data live in `supabase/seed.sql`.
 
 ### API Routes (Next.js App Router)
 
@@ -67,7 +69,7 @@ All endpoints return a typed `ApiResponse<T>` envelope (`{ data, error }`) and i
 
 ### Client-side Data Layer
 
-**TanStack React Query v5** manages all server state. Custom hooks in `lib/hooks/use-users.ts` encapsulate fetching, mutations, and automatic cache invalidation — the UI never calls `fetch()` directly.
+**TanStack React Query v5** manages all server state. Custom hooks in `lib/hooks/use-users.ts` encapsulate fetching and mutations. The `useUsers()` hook subscribes to Supabase Realtime `postgres_changes` events on the `users` table, updating the cache instantly when other clients make changes. Mutations also invalidate the cache as a fallback for reliability — the UI never calls `fetch()` directly.
 
 ### Component Hierarchy
 

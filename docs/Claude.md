@@ -20,6 +20,7 @@ Build a feature that simulates synchronizing new user data with an external part
 | Framework | **Next.js 16** (App Router) | Latest stable version; file-based routing, server components, and built-in API routes eliminate boilerplate |
 | Language | **TypeScript** (strict mode) | End-to-end type safety via shared `ApiResponse<T>` and `User` types across API and UI |
 | Database | **Supabase** (managed PostgreSQL) | Zero-config hosted Postgres with a JS SDK; avoids local DB setup friction while fulfilling the PostgreSQL requirement |
+| Realtime | **Supabase Realtime** | WebSocket-based change propagation from PostgreSQL to all connected clients; zero-latency cross-browser sync |
 | Data Fetching | **TanStack React Query v5** | Declarative cache management, automatic re-fetches after mutations, and built-in loading/error states |
 | Styling | **Tailwind CSS v4** | Utility-first CSS with dark mode support; fast iteration without context-switching to style files |
 | Runtime | **React 19** | Latest concurrent features; pairs with Next.js 16 for streaming and Server Components |
@@ -29,6 +30,7 @@ Build a feature that simulates synchronizing new user data with an external part
 
 - **Managed PostgreSQL** — the assignment asks for a PostgreSQL database; Supabase provides exactly that with zero ops overhead.
 - **Row Level Security** — enabled out of the box for the demo, making it trivial to lock down in production.
+- **Realtime subscriptions** — Supabase Realtime bridges PostgreSQL's logical replication to WebSockets, enabling instant multi-client synchronization without polling.
 - **SDK simplicity** — `@supabase/supabase-js` provides a typed query builder that maps cleanly to SQL without the weight of an ORM.
 - Trade-off: the Supabase SDK abstracts raw SQL. The seed file (`supabase/seed.sql`) demonstrates direct PostgreSQL DDL/DML proficiency.
 
@@ -40,13 +42,17 @@ Build a feature that simulates synchronizing new user data with an external part
 
 **Table: `users`**
 
-| Column | Type | Constraints |
-|--------|------|-------------|
-| `id` | `UUID` | Primary Key, default `uuid_generate_v4()` |
-| `name` | `TEXT` | NOT NULL |
-| `email` | `TEXT` | UNIQUE, NOT NULL |
-| `synced_at` | `TIMESTAMPTZ` | Nullable |
-| `created_at` | `TIMESTAMPTZ` | Default `NOW()` |
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | `UUID` | Primary Key, default `uuid_generate_v4()` | — |
+| `name` | `TEXT` | NOT NULL | — |
+| `email` | `TEXT` | UNIQUE, NOT NULL | — |
+| `synced_at` | `TIMESTAMPTZ` | Nullable | — |
+| `created_at` | `TIMESTAMPTZ` | Default `NOW()` | — |
+
+**Realtime setup:**
+- `REPLICA IDENTITY FULL` — required for realtime DELETE events to include the old row data
+- `ALTER PUBLICATION supabase_realtime ADD TABLE users` — registers the table with Supabase's realtime publication
 
 **Seed data** — 5 sample users (3 with `synced_at = NULL`, 2 already synced). See [`supabase/seed.sql`](../supabase/seed.sql).
 
@@ -81,8 +87,9 @@ Each endpoint:
 
 ### 4. Integration & UX ✅
 
+- **Real-time synchronization:** The `useUsers()` hook subscribes to Supabase Realtime `postgres_changes` events (INSERT, UPDATE, DELETE). Changes propagate to all connected clients instantly via WebSocket.
+- **Mutation invalidation (fallback):** After mutations, React Query invalidates the `["users"]` cache, triggering a server refetch. This ensures correctness if realtime is temporarily unavailable.
 - **Loading states:** Spinner animations on all buttons during API calls; buttons are disabled to prevent double-submission.
-- **Optimistic feedback:** React Query invalidates the `["users"]` cache on mutation success, triggering an automatic re-fetch so the UI updates immediately.
 - **Error banners:** Sync/unsync failures display inline error messages with red styling.
 - **Success banners:** After bulk sync/unsync, a green banner confirms the count of affected users.
 - **Dark mode:** Full dark-mode support via Tailwind's `dark:` variants.
@@ -136,6 +143,12 @@ user-sync-dashboard/
 
 ## Key Design Decisions
 
+### Real-time data sync with fallback reliability
+
+The `useUsers()` hook sets up a Supabase Realtime subscription to `postgres_changes` on the `users` table. Updates are applied directly to the React Query cache via `setQueryData()`. Mutations also invalidate the cache as a fallback, ensuring correctness even if realtime is unavailable (e.g., network interruption, setup incomplete). This dual approach provides:
+- **Zero-latency cross-browser updates** when realtime is active
+- **Automatic server reconciliation** if realtime events are missed
+
 ### Type-safe API contract
 
 A single `ApiResponse<T>` generic covers every endpoint, ensuring the client always receives `{ data: T | null, error: string | null }`. The React Query hooks in `use-users.ts` parse this contract and throw on errors, so the UI can rely on standard `isLoading` / `isError` / `data` states.
@@ -182,6 +195,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 # 4. Set up the database
 #    Run the contents of supabase/seed.sql in the Supabase SQL Editor
 #    (or via psql / any PostgreSQL client)
+#    This creates the users table and enables realtime subscriptions
 
 # 5. Start the dev server
 pnpm dev
