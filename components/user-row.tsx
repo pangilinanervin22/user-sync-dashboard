@@ -9,13 +9,11 @@ interface UserRowProps {
   user: User;
   onSync: (id: string) => void;
   isSyncing: boolean;
-  onUnsync: (id: string) => void;
-  isUnsyncing: boolean;
   onDelete: (id: string) => void;
   isDeleting: boolean;
 }
 
-export function UserRow({ user, onSync, isSyncing, onUnsync, isUnsyncing, onDelete, isDeleting }: UserRowProps) {
+export function UserRow({ user, onSync, isSyncing, onDelete, isDeleting }: UserRowProps) {
   // "Adjusting state during render" pattern (recommended by React docs)
   const [prevSyncedAt, setPrevSyncedAt] = useState(user.synced_at);
   const [justSynced, setJustSynced] = useState(false);
@@ -34,7 +32,7 @@ export function UserRow({ user, onSync, isSyncing, onUnsync, isUnsyncing, onDele
     }
   }, [justSynced]);
 
-  const busy = isSyncing || isUnsyncing || isDeleting;
+  const busy = isSyncing || isDeleting;
 
   return (
     <tr
@@ -58,11 +56,6 @@ export function UserRow({ user, onSync, isSyncing, onUnsync, isUnsyncing, onDele
           {!user.synced_at && (
             <ActionBtn color="blue" onClick={() => onSync(user.id)} loading={isSyncing} disabled={busy}>
               {isSyncing ? "Syncing…" : "Sync"}
-            </ActionBtn>
-          )}
-          {user.synced_at && (
-            <ActionBtn color="amber" onClick={() => onUnsync(user.id)} loading={isUnsyncing} disabled={busy}>
-              {isUnsyncing ? "Unsyncing…" : "Unsync"}
             </ActionBtn>
           )}
           <ActionBtn color="red" onClick={() => onDelete(user.id)} loading={isDeleting} disabled={busy}>

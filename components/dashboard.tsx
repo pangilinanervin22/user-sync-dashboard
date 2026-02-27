@@ -96,8 +96,6 @@ export default function Dashboard() {
         users={users ?? []}
         onSyncUser={handleSyncUser}
         syncingUserId={syncingUserId}
-        onUnsyncUser={handleUnsyncUser}
-        unsyncingUserId={unsyncingUserId}
         onDeleteUser={handleDeleteUser}
         deletingUserId={deletingUserId}
       />

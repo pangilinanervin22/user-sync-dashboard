@@ -10,13 +10,11 @@ interface UserTableProps {
   users: User[];
   onSyncUser: (id: string) => void;
   syncingUserId: string | null;
-  onUnsyncUser: (id: string) => void;
-  unsyncingUserId: string | null;
   onDeleteUser: (id: string) => void;
   deletingUserId: string | null;
 }
 
-export function UserTable({ users, onSyncUser, syncingUserId, onUnsyncUser, unsyncingUserId, onDeleteUser, deletingUserId }: UserTableProps) {
+export function UserTable({ users, onSyncUser, syncingUserId, onDeleteUser, deletingUserId }: UserTableProps) {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const sortedUsers = useMemo(
@@ -86,8 +84,6 @@ export function UserTable({ users, onSyncUser, syncingUserId, onUnsyncUser, unsy
                 user={user}
                 onSync={onSyncUser}
                 isSyncing={syncingUserId === user.id}
-                onUnsync={onUnsyncUser}
-                isUnsyncing={unsyncingUserId === user.id}
                 onDelete={onDeleteUser}
                 isDeleting={deletingUserId === user.id}
               />
