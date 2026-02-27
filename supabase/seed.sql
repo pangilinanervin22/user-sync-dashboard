@@ -24,7 +24,12 @@ INSERT INTO users (name, email, synced_at) VALUES
   ('Eve Davis',      'eve@example.com',     NULL)
 ON CONFLICT (email) DO NOTHING;
 
--- 4. (Optional) Enable Row Level Security — open access for demo
+-- 4. Enable Realtime for the users table
+-- Replica identity FULL is required so DELETE events include the old row data
+ALTER TABLE users REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE users;
+
+-- 5. (Optional) Enable Row Level Security — open access for demo
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all access" ON users
